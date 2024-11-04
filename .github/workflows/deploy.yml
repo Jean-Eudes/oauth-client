@@ -27,7 +27,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     env:
-      VITE_REDIRECT_URL: jean-eudes.github.io/oauth-client/
+      VITE_REDIRECT_URL: https://jean-eudes.github.io/oauth-client/
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
