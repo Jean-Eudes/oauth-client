@@ -27,7 +27,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     env:
-      VITE_REDIRECT_URL: http://localhost:5173/
+      VITE_REDIRECT_URL: jean-eudes.github.io/oauth-client/
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
