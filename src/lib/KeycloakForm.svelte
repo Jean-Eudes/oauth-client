@@ -2,52 +2,20 @@
     import {type KeyCloak} from "./model";
     import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
     import {authorizeUrl, clientId, redirectUrl} from "./config";
+    import {authorizationCodeWorkflow, implicitWorkflow} from "./oauth2";
 
     export let model: KeyCloak;
-
-    function authorizeURLForImplicit() {
-        const params = {
-            client_id: clientId(model.environment),
-            state: "1234",
-            redirect_uri: redirectUrl(),
-            response_type: 'token id_token',
-            scope: 'openid',
-            nonce: '1234',
-            acr_values: model.acr_value,
-        };
-
-        const searchParams = new URLSearchParams(params);
-        if (model.prompt !== 'no-prompt') {
-            searchParams.set('prompt', model.prompt);
-        }
-        return authorizeUrl(model.environment) + '?' + searchParams.toString();
-    }
 
     async function authenticate() {
         const data = JSON.stringify(model);
         sessionStorage.setItem('keycloak-page', data);
 
         if (model.workflow === 'implicit') {
-            let url = authorizeURLForImplicit();
+            let url = implicitWorkflow.authorize(model.environment, model.acr_value, model.prompt);
             window.location.replace(url);
         }
         if (model.workflow === 'authorization_code') {
-
-            const params = {
-                client_id: clientId(model.environment),
-                state: "1234",
-                redirect_uri: redirectUrl(),
-                response_type: 'code',
-                scope: 'openid',
-                nonce: '1234',
-                acr_values: model.acr_value,
-            };
-
-            const searchParams = new URLSearchParams(params);
-            if (model.prompt !== 'no-prompt') {
-                searchParams.set('prompt', model.prompt);
-            }
-            const url = authorizeUrl(model.environment) + '?' + searchParams.toString();
+            const url = authorizationCodeWorkflow.authorize(model.environment, model.acr_value, model.prompt);
             window.location.replace(url);
         }
         if (model.workflow === 'authorization_code_with_pkce') {

@@ -6,6 +6,7 @@
     import {onMount} from "svelte";
     import {jwtDecode} from "jwt-decode";
     import {clientId, redirectUrl, tokenUrl} from "./config";
+    import {authorizationCodeWorkflow} from "./oauth2";
 
     let model: KeyCloak = {
         acr_value: 'L1',
@@ -13,7 +14,6 @@
         prompt: "no-prompt",
         workflow: "implicit"
     }
-
     let token: Token | null = null;
 
     onMount(async () => {
@@ -40,23 +40,7 @@
             let code = urlParams.get("code");
 
             if (code) {
-                const response = await fetch(tokenUrl(model.environment), {
-                    method: "POST",
-                    body: new URLSearchParams({
-                            code: code,
-                            client_id: clientId(model.environment),
-                            grant_type: "authorization_code",
-                            redirect_uri: redirectUrl(),
-                        }
-                    )
-                })
-
-                const json = await response.json();
-
-                token = {
-                    id_token: jwtDecode(json.id_token),
-                    access_token: jwtDecode(json.access_token)
-                };
+                token = await authorizationCodeWorkflow.token(model.environment, code);
             }
         }
         if (model.workflow === 'authorization_code_with_pkce') {

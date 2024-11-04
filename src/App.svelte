@@ -9,9 +9,9 @@
 
     <div class="tabs">
         <ul>
-            <li class:is-active={page === 'keycloak'}><a href="/#keycloak" onclick="{() => page = 'keycloak'}">sgconnect</a>
+            <li class:is-active={page === 'keycloak'}><a href="#keycloak" onclick="{() => page = 'keycloak'}">sgconnect</a>
             </li>
-            <li class:is-active={page === 'azure'}><a href="/#azure" onclick="{() => page = 'azure'}">azure</a></li>
+            <li class:is-active={page === 'azure'}><a href="#azure" onclick="{() => page = 'azure'}">azure</a></li>
         </ul>
     </div>
 
