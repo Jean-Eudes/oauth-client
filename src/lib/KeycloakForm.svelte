@@ -58,6 +58,7 @@
         align-items: stretch;
         justify-content: flex-start;
         margin-bottom: 16px;
+        flex-wrap: wrap;
     }
 
     .container {
@@ -70,6 +71,7 @@
 
     .field-label {
         text-align: left;
+        margin-inline-end: 1.5rem;
     }
 </style>
 
