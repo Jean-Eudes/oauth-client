@@ -1,8 +1,6 @@
 <script lang="ts">
     import {type KeyCloak} from "./model";
-    import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
-    import {authorizeUrl, clientId, redirectUrl} from "./config";
-    import {authorizationCodeWorkflow, implicitWorkflow} from "./oauth2";
+    import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, implicitWorkflow} from "./oauth2";
 
     export let model: KeyCloak;
 
@@ -19,28 +17,7 @@
             window.location.replace(url);
         }
         if (model.workflow === 'authorization_code_with_pkce') {
-
-            let code_verifier = generateRandomString(60);
-            let code_challenge = await pkceChallengeFromVerifier(code_verifier);
-
-            sessionStorage.setItem('oauth2', JSON.stringify({workflow: model.workflow, code_verifier: code_verifier}));
-            const params = {
-                client_id: clientId(model.environment),
-                state: "1234",
-                redirect_uri: redirectUrl(),
-                response_type: 'code',
-                code_challenge: code_challenge,
-                scope: 'openid',
-                nonce: '1234',
-                acr_values: model.acr_value,
-                code_challenge_method: 'S256'
-            };
-
-            const searchParams = new URLSearchParams(params);
-            if (model.prompt !== 'no-prompt') {
-                searchParams.set('prompt', model.prompt);
-            }
-            const url = authorizeUrl(model.environment) + '?' + searchParams.toString();
+            const url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt);
             window.location.replace(url);
         }
     }
@@ -77,7 +54,7 @@
 
 <div class="container">
     <div class="form">
-        <div class="">
+        <div id="environment">
             <div class="field-label">
                 <span class="label">Environnement</span>
             </div>
@@ -100,7 +77,7 @@
                     development</label>
             </div>
         </div>
-        <div class="">
+        <div id="workflow">
             <div class="field-label">
                 <span class="label">Workflow</span>
             </div>
@@ -122,7 +99,7 @@
                     Authorization code with pkce</label>
             </div>
         </div>
-        <div class="">
+        <div id="acrValue">
             <div class="field-label">
                 <span class="label">acr value</span>
             </div>
@@ -148,7 +125,7 @@
                     L4</label>
             </div>
         </div>
-        <div class="">
+        <div id="prompt">
             <div class="field-label">
                 <span class="label">prompt</span>
             </div>

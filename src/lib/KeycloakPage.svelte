@@ -5,8 +5,7 @@
     import type {KeyCloak, Token} from "./model";
     import {onMount} from "svelte";
     import {jwtDecode} from "jwt-decode";
-    import {clientId, redirectUrl, tokenUrl} from "./config";
-    import {authorizationCodeWorkflow} from "./oauth2";
+    import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE} from "./oauth2";
 
     let model: KeyCloak = {
         acr_value: 'L1',
@@ -46,27 +45,8 @@
         if (model.workflow === 'authorization_code_with_pkce') {
             const urlParams = new URLSearchParams(window.location.search);
             let code = urlParams.get("code");
-
-            let oautht2 = sessionStorage.getItem('oauth2');
-            if (oautht2 && code) {
-                let parse = JSON.parse(oautht2);
-                const response = await fetch(tokenUrl(model.environment), {
-                    method: "POST",
-                    body: new URLSearchParams({
-                            code: code,
-                            client_id: clientId(model.environment),
-                            grant_type: "authorization_code",
-                            redirect_uri: redirectUrl(),
-                            code_verifier: parse.code_verifier,
-                        }
-                    )
-                })
-                sessionStorage.removeItem("oauth2");
-                const json = await response.json();
-                token = {
-                    id_token: jwtDecode(json.id_token),
-                    access_token: jwtDecode(json.access_token)
-                };
+            if (code) {
+                token = await authorizationCodeWorkflowWithPKCE.token(model.environment, code);
             }
         }
     });
