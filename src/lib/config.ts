@@ -1,6 +1,6 @@
-import type {Environment} from "./model";
+import type {Configuration, Environment} from "./model";
 
-let config = {
+let config: Configuration = {
     development: {
         authorize_url: "http://localhost:8080/realms/test/protocol/openid-connect/auth",
         token_url: "http://localhost:8080/realms/test/protocol/openid-connect/token",
