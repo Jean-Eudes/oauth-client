@@ -1,16 +1,17 @@
-type Environment = 'development' | 'homologation' | 'production';
+import {type Environment} from "./config";
+
 type AcrValue = "L1" | "L2" | "L3" | "L4";
 type Workflow = "implicit" | "authorization_code" | "authorization_code_with_pkce";
 type Prompt = "none" | "login" | "no-prompt";
 
 type Client = {
-    client_id: string,
+    id: string,
     authorize_url: string,
     token_url: string,
 }
 
 type Configuration = {
-    [key in Environment]: Client
+    [key in string]: Client
 };
 
 type Token = {
@@ -26,5 +27,5 @@ type KeyCloak = {
 }
 
 export type {
-    Token, Environment, AcrValue, Workflow, Prompt, KeyCloak, Configuration
+    Token, AcrValue, Workflow, Prompt, KeyCloak, Configuration, Client, Environment
 }

@@ -1,6 +1,7 @@
 <script lang="ts">
     import {type KeyCloak} from "./model";
     import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, implicitWorkflow} from "./oauth2";
+    import {environments} from "./config";
 
     export let model: KeyCloak;
 
@@ -58,25 +59,16 @@
             <div class="field-label">
                 <span class="label">Environnement</span>
             </div>
-            <div class="field-label">
-                <label for="production">
-                    <input type="radio" id="production" name="environment" value="production"
-                           bind:group={model.environment}>
-                    production</label>
-            </div>
-            <div class="field-label">
-                <label for="homologation">
-                    <input type="radio" id="homologation" name="environment" value="homologation"
-                           bind:group={model.environment}>
-                    homologation</label>
-            </div>
-            <div class="field-label">
-                <label for="development">
-                    <input type="radio" id="development" name="environment" value="development"
-                           bind:group={model.environment}>
-                    development</label>
-            </div>
-        </div>
+
+            {#each environments() as env}
+                <div class="field-label">
+                    <label for="{env}">
+                        <input type="radio" id="{env}" name="environment" value="{env}"
+                               bind:group={model.environment}>
+                        {env}</label>
+                </div>
+            {/each}
+         </div>
         <div id="workflow">
             <div class="field-label">
                 <span class="label">Workflow</span>
