@@ -1,13 +1,12 @@
 import {clientBy, redirectUrl} from "./config";
 import type {AcrValue, Environment, Prompt, Token} from "./model";
-import {jwtDecode} from "jwt-decode";
 import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
 
 function authorize(environment: Environment, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>): string {
     const state = generateRandomString(30);
     const nonce = generateRandomString(30);
-    const searchParams = new URLSearchParams();
     const client = clientBy(environment);
+    const searchParams = new URLSearchParams();
 
     searchParams.set('client_id', client.id);
     searchParams.set('state', state);
@@ -72,9 +71,23 @@ async function exchange_code_vs_token(environment: Environment, code: string): P
     const json = await response.json();
 
     return {
-        id_token: jwtDecode(json.id_token),
-        access_token: jwtDecode(json.access_token)
+        id_token: json.id_token,
+        access_token: json.access_token
     };
+}
+
+async function user_info(environment: Environment, access_token: string) {
+    const client = clientBy(environment);
+
+    console.log(access_token)
+
+    const response = await fetch(client.userInfo_url, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${access_token}`,
+        }
+    })
+    return await response.json();
 }
 
 async function exchange_code_vs_token_with_pkce(environment: Environment, code: string): Promise<Token | null> {
@@ -96,8 +109,8 @@ async function exchange_code_vs_token_with_pkce(environment: Environment, code: 
         sessionStorage.removeItem("oauth2");
         const json = await response.json();
         return {
-            id_token: jwtDecode(json.id_token),
-            access_token: jwtDecode(json.access_token)
+            id_token: json.id_token,
+            access_token: json.access_token,
         };
     }
     return null;
@@ -117,4 +130,4 @@ const authorizationCodeWorkflowWithPKCE = {
     token: exchange_code_vs_token_with_pkce,
 }
 
-export {implicitWorkflow, authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE}
+export {implicitWorkflow, authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, user_info}

@@ -5,15 +5,17 @@
     import type {KeyCloak, Token} from "./model";
     import {onMount} from "svelte";
     import {jwtDecode} from "jwt-decode";
-    import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE} from "./oauth2";
+    import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, user_info} from "./oauth2";
 
     let model: KeyCloak = {
         acr_value: 'L1',
         environment: 'production',
         prompt: "no-prompt",
-        workflow: "implicit"
+        workflow: "implicit",
     }
+
     let token: Token | null = null;
+    let userInfo: any | null = null;
 
     onMount(async () => {
         let item = sessionStorage.getItem('keycloak-page');
@@ -28,9 +30,10 @@
 
             if (id_token && access_token) {
                 token = {
-                    id_token: jwtDecode(id_token),
-                    access_token: jwtDecode(access_token)
+                    id_token: id_token,
+                    access_token: access_token
                 };
+                userInfo = await user_info(model.environment, access_token);
             }
         }
 
@@ -40,6 +43,7 @@
 
             if (code) {
                 token = await authorizationCodeWorkflow.token(model.environment, code);
+                userInfo = await user_info(model.environment, token.access_token);
             }
         }
         if (model.workflow === 'authorization_code_with_pkce') {
@@ -47,6 +51,9 @@
             let code = urlParams.get("code");
             if (code) {
                 token = await authorizationCodeWorkflowWithPKCE.token(model.environment, code);
+                if (token) {
+                    userInfo = await user_info(model.environment, token.access_token);
+                }
             }
         }
     });
@@ -54,10 +61,14 @@
 </script>
 <div>
     <KeycloakForm model="{model}"></KeycloakForm>
-    {#if token}
-        <div style="display: flex;flex-direction: row; flex-wrap: wrap">
-            <DisplayObject object="{token.id_token}" title="id token info"></DisplayObject>
-            <DisplayObject object="{token.access_token}" title="access token info"></DisplayObject>
-        </div>
-    {/if}
+    <div style="display: flex;flex-direction: row; flex-wrap: wrap">
+        {#if token}
+            <DisplayObject object="{jwtDecode(token.id_token)}" title="id token info"></DisplayObject>
+            <DisplayObject object="{jwtDecode(token.access_token)}" title="access token info"></DisplayObject>
+        {/if}
+
+        {#if userInfo}
+            <DisplayObject object="{userInfo}" title="user info"></DisplayObject>
+        {/if}
+    </div>
 </div>

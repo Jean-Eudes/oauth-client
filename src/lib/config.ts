@@ -7,16 +7,19 @@ const config: Configuration = {
         authorize_url: "http://localhost:8080/realms/test/protocol/openid-connect/auth",
         token_url: "http://localhost:8080/realms/test/protocol/openid-connect/token",
         id: "test-client",
+        userInfo_url: "http://localhost:8080/realms/test/protocol/openid-connect/userinfo"
     },
     homologation: {
         authorize_url: "http://localhost:8080/realms/test/protocol/openid-connect/auth",
         token_url: "http://localhost:8080/realms/test/protocol/openid-connect/token",
         id: "test-client",
+        userInfo_url: "http://localhost:8080/realms/test/protocol/openid-connect/userinfo",
     },
     production: {
         authorize_url: "http://localhost:8080/realms/test/protocol/openid-connect/auth",
         token_url: "http://localhost:8080/realms/test/protocol/openid-connect/token",
         id: "test-client",
+        userInfo_url: "http://localhost:8080/realms/test/protocol/openid-connect/userinfo",
     }
 } as const;
 

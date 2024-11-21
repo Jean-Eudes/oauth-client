@@ -8,6 +8,7 @@ type Client = {
     id: string,
     authorize_url: string,
     token_url: string,
+    userInfo_url: string,
 }
 
 type Configuration = {
@@ -15,15 +16,15 @@ type Configuration = {
 };
 
 type Token = {
-    id_token: Object,
-    access_token: Object,
+    id_token: string,
+    access_token: string,
 }
 
 type KeyCloak = {
     environment: Environment,
     workflow: Workflow,
     acr_value: AcrValue,
-    prompt: Prompt
+    prompt: Prompt,
 }
 
 export type {
