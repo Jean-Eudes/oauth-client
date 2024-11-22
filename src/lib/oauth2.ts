@@ -1,18 +1,18 @@
-import {clientBy, redirectUrl} from "./config";
-import type {AcrValue, Environment, Prompt, Token} from "./model";
+import {environmentBy, redirectUrl} from "./config";
+import type {AcrValue, EnvironmentName, Prompt, Token, WorkflowName} from "./model";
 import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
 
-function authorize(environment: Environment, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>): string {
+function authorize(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string): string {
     const state = generateRandomString(30);
     const nonce = generateRandomString(30);
-    const client = clientBy(environment);
+    const env = environmentBy(environment);
     const searchParams = new URLSearchParams();
 
-    searchParams.set('client_id', client.id);
+    searchParams.set('client_id', env.workflow.implicit.client_id);
     searchParams.set('state', state);
     searchParams.set('redirect_uri', redirectUrl());
     searchParams.set('response_type', response_type);
-    searchParams.set('scope', 'openid');
+    searchParams.set('scope', scope);
     searchParams.set('nonce', nonce);
     searchParams.set('acr_values', acrValues);
 
@@ -20,7 +20,7 @@ function authorize(environment: Environment, acrValues: AcrValue, response_type:
         searchParams.set(key, value);
     }
 
-    return client.authorize_url + '?' + searchParams.toString();
+    return env.authorize_url + '?' + searchParams.toString();
 }
 
 function createMapWithPrompt(prompt: Prompt) {
@@ -31,17 +31,17 @@ function createMapWithPrompt(prompt: Prompt) {
     return additional_params;
 }
 
-function authorizeURLForImplicit(env: Environment, acrValues: AcrValue, prompt: Prompt): string {
+function authorizeURLForImplicit(env: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
     let additional_params = createMapWithPrompt(prompt);
-    return authorize(env, acrValues, "token id_token", additional_params);
+    return authorize(env, acrValues, "token id_token", additional_params, scopes);
 }
 
-function authorization_code(environment: Environment, acrValues: AcrValue, prompt: Prompt): string {
+function authorization_code(environment: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
     const additional_params = createMapWithPrompt(prompt);
-    return authorize(environment, acrValues, "code", additional_params);
+    return authorize(environment, acrValues, "code", additional_params, scopes);
 }
 
-async function authorize_code_with_pkce(environment: Environment, acrValues: AcrValue, prompt: Prompt) {
+async function authorize_code_with_pkce(environment: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string) {
     const code_verifier = generateRandomString(60);
     const code_challenge = await pkceChallengeFromVerifier(code_verifier);
     sessionStorage.setItem('oauth2', JSON.stringify({code_verifier: code_verifier}));
@@ -51,17 +51,17 @@ async function authorize_code_with_pkce(environment: Environment, acrValues: Acr
     additional_params.set('code_challenge', code_challenge);
     additional_params.set('code_challenge_method', 'S256');
 
-    return authorize(environment, acrValues, "code", additional_params);
+    return authorize(environment, acrValues, "code", additional_params, scopes);
 }
 
-async function exchange_code_vs_token(environment: Environment, code: string): Promise<Token> {
-    const client = clientBy(environment);
+async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Token> {
+    const env = environmentBy(environment);
 
-    const response = await fetch(client.token_url, {
+    const response = await fetch(env.token_url, {
         method: "POST",
         body: new URLSearchParams({
                 code: code,
-                client_id: client.id,
+                client_id: env.workflow['authorization_code_with_pkce'].client_id,
                 grant_type: "authorization_code",
                 redirect_uri: redirectUrl(),
             }
@@ -76,10 +76,8 @@ async function exchange_code_vs_token(environment: Environment, code: string): P
     };
 }
 
-async function user_info(environment: Environment, access_token: string) {
-    const client = clientBy(environment);
-
-    console.log(access_token)
+async function user_info(environment: EnvironmentName, access_token: string) {
+    const client = environmentBy(environment);
 
     const response = await fetch(client.userInfo_url, {
         method: "POST",
@@ -90,16 +88,16 @@ async function user_info(environment: Environment, access_token: string) {
     return await response.json();
 }
 
-async function exchange_code_vs_token_with_pkce(environment: Environment, code: string): Promise<Token | null> {
-    const client = clientBy(environment);
+async function exchange_code_vs_token_with_pkce(environment: EnvironmentName, code: string): Promise<Token | null> {
+    const env = environmentBy(environment);
     let code_verifier = sessionStorage.getItem('oauth2');
     if (code_verifier) {
         let parse = JSON.parse(code_verifier);
-        const response = await fetch(client.token_url, {
+        const response = await fetch(env.token_url, {
             method: "POST",
             body: new URLSearchParams({
                     code: code,
-                    client_id: client.id,
+                    client_id: env.workflow['authorization_code_with_pkce'].client_id,
                     grant_type: "authorization_code",
                     redirect_uri: redirectUrl(),
                     code_verifier: parse.code_verifier,

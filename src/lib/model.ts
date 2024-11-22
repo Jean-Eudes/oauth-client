@@ -1,18 +1,27 @@
-import {type Environment} from "./config";
+import {type EnvironmentName} from "./config";
 
 type AcrValue = "L1" | "L2" | "L3" | "L4";
-type Workflow = "implicit" | "authorization_code" | "authorization_code_with_pkce";
+type WorkflowName = "implicit" | "authorization_code" | "authorization_code_with_pkce";
 type Prompt = "none" | "login" | "no-prompt";
 
-type Client = {
-    id: string,
+type Environment = {
     authorize_url: string,
     token_url: string,
     userInfo_url: string,
+    workflow: Workflow,
+}
+
+type Workflow = {
+    [key in WorkflowName]: Client
+}
+
+type Client = {
+    client_id: string,
+    client_secret?: string,
 }
 
 type Configuration = {
-    [key in string]: Client
+    [key in string]: Environment
 };
 
 type Token = {
@@ -21,12 +30,21 @@ type Token = {
 }
 
 type KeyCloak = {
-    environment: Environment,
-    workflow: Workflow,
+    environment: EnvironmentName,
+    workflow: WorkflowName,
     acr_value: AcrValue,
     prompt: Prompt,
+    scopes: string,
 }
 
 export type {
-    Token, AcrValue, Workflow, Prompt, KeyCloak, Configuration, Client, Environment
+    Token,
+    AcrValue,
+    WorkflowName,
+    Prompt,
+    KeyCloak,
+    Configuration,
+    Environment,
+    EnvironmentName,
+    Client
 }

@@ -8,17 +8,18 @@
     async function authenticate() {
         const data = JSON.stringify(model);
         sessionStorage.setItem('keycloak-page', data);
+        let scopes = model.scopes.trim();
 
         if (model.workflow === 'implicit') {
-            let url = implicitWorkflow.authorize(model.environment, model.acr_value, model.prompt);
+            let url = implicitWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
             window.location.replace(url);
         }
         if (model.workflow === 'authorization_code') {
-            const url = authorizationCodeWorkflow.authorize(model.environment, model.acr_value, model.prompt);
+            const url = authorizationCodeWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
             window.location.replace(url);
         }
         if (model.workflow === 'authorization_code_with_pkce') {
-            const url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt);
+            const url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt, scopes);
             window.location.replace(url);
         }
     }
@@ -121,7 +122,7 @@
             <div class="field-label">
                 <span class="label">prompt</span>
             </div>
-            <div>
+            <div class="field-label">
                 <label for="no-prompt">
                     <input type="radio" id="no-prompt" name="prompt" value="no-prompt" bind:group={model.prompt}>
                     no prompt</label>
@@ -137,13 +138,21 @@
                     login</label>
             </div>
         </div>
+        <div id="scope">
+            <div class="field-label">
+                <span class="label">scope</span>
+            </div>
+            <div class="field-label">
+                <textarea cols="30" rows="3" id="scopes" name="scopes" class="input" style="height: auto" bind:value={model.scopes}></textarea>
+            </div>
+        </div>
     </div>
 
     <div class="field is-horizontal">
         <div class="field" style="justify-content: flex-start; margin-left: 50px">
             <div class="control">
                 <button class="button is-danger" onclick="{logout}">Logout</button>
-                <button class="button is-primary" onclick="{authenticate}">Authentification</button>
+                <button type="submit" class="button is-primary" onclick="{authenticate}">Authentification</button>
             </div>
         </div>
     </div>

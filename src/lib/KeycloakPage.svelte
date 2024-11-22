@@ -12,10 +12,11 @@
         environment: 'production',
         prompt: "no-prompt",
         workflow: "implicit",
+        scopes: "openid",
     }
 
     let token: Token | null = null;
-    let userInfo: any | null = null;
+    let userInfo: any;
 
     onMount(async () => {
         let item = sessionStorage.getItem('keycloak-page');
