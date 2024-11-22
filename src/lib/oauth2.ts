@@ -2,13 +2,13 @@ import {environmentBy, redirectUrl} from "./config";
 import type {AcrValue, EnvironmentName, Prompt, Token, WorkflowName} from "./model";
 import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
 
-function authorize(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string): string {
+function authorize(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string, clientId: string): string {
     const state = generateRandomString(30);
     const nonce = generateRandomString(30);
     const env = environmentBy(environment);
     const searchParams = new URLSearchParams();
 
-    searchParams.set('client_id', env.workflow.implicit.client_id);
+    searchParams.set('client_id', clientId);
     searchParams.set('state', state);
     searchParams.set('redirect_uri', redirectUrl());
     searchParams.set('response_type', response_type);
@@ -31,17 +31,19 @@ function createMapWithPrompt(prompt: Prompt) {
     return additional_params;
 }
 
-function authorizeURLForImplicit(env: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
+function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
     let additional_params = createMapWithPrompt(prompt);
-    return authorize(env, acrValues, "token id_token", additional_params, scopes);
+    let environment = environmentBy(environmentName);
+    return authorize(environmentName, acrValues, "token id_token", additional_params, scopes, environment.workflow.implicit.client_id);
 }
 
-function authorization_code(environment: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
+function authorization_code(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
     const additional_params = createMapWithPrompt(prompt);
-    return authorize(environment, acrValues, "code", additional_params, scopes);
+    let environment = environmentBy(environmentName);
+    return authorize(environmentName, acrValues, "code", additional_params, scopes, environment.workflow.authorization_code.client_id);
 }
 
-async function authorize_code_with_pkce(environment: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string) {
+async function authorize_code_with_pkce(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string) {
     const code_verifier = generateRandomString(60);
     const code_challenge = await pkceChallengeFromVerifier(code_verifier);
     sessionStorage.setItem('oauth2', JSON.stringify({code_verifier: code_verifier}));
@@ -50,8 +52,9 @@ async function authorize_code_with_pkce(environment: EnvironmentName, acrValues:
 
     additional_params.set('code_challenge', code_challenge);
     additional_params.set('code_challenge_method', 'S256');
+    let environment = environmentBy(environmentName);
 
-    return authorize(environment, acrValues, "code", additional_params, scopes);
+    return authorize(environmentName, acrValues, "code", additional_params, scopes, environment.workflow.authorization_code_with_pkce.client_id);
 }
 
 async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Token> {
@@ -61,7 +64,7 @@ async function exchange_code_vs_token(environment: EnvironmentName, code: string
         method: "POST",
         body: new URLSearchParams({
                 code: code,
-                client_id: env.workflow['authorization_code_with_pkce'].client_id,
+                client_id: env.workflow['authorization_code'].client_id,
                 grant_type: "authorization_code",
                 redirect_uri: redirectUrl(),
             }

@@ -1,9 +1,11 @@
 <script lang="ts">
-    import {type KeyCloak} from "./model";
+    import {type KeyCloak, type WorkflowName} from "./model";
     import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, implicitWorkflow} from "./oauth2";
-    import {environments} from "./config";
+    import {environments, workflowsBy} from "./config";
 
     export let model: KeyCloak;
+
+    $: workflows = workflowsBy(model.environment);
 
     async function authenticate() {
         const data = JSON.stringify(model);
@@ -21,6 +23,16 @@
         if (model.workflow === 'authorization_code_with_pkce') {
             const url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt, scopes);
             window.location.replace(url);
+        }
+    }
+
+    // TODO : replace string by WOrkflowName
+    function displayWorkflow(workflow: string) : string {
+        switch (workflow) {
+            case 'implicit': return 'Implicit';
+            case 'authorization_code': return 'Authorization code';
+            case 'authorization_code_with_pkce': return 'Authorization code with pkce';
+            default: return "";
         }
     }
 
@@ -52,6 +64,9 @@
         text-align: left;
         margin-inline-end: 1.5rem;
     }
+    #workflow {
+        width: 250px;
+    }
 </style>
 
 <div class="container">
@@ -74,23 +89,14 @@
             <div class="field-label">
                 <span class="label">Workflow</span>
             </div>
+            {#each workflows as workflow}
+
             <div class="field-label">
-                <label for="implicit">
-                    <input type="radio" id="implicit" name="workflow" value="implicit" bind:group={model.workflow}>
-                    Implicit</label>
+                <label for="{workflow}">
+                    <input type="radio" id="{workflow}" name="workflow" value="{workflow}" bind:group={model.workflow}>
+                    {displayWorkflow(workflow)}</label>
             </div>
-            <div class="field-label">
-                <label for="authorization_code">
-                    <input type="radio" id="authorization_code" name="workflow" value="authorization_code"
-                           bind:group={model.workflow}>
-                    Authorization code</label>
-            </div>
-            <div class="field-label">
-                <label for="authorization_code_with_pkce">
-                    <input type="radio" id="authorization_code_with_pkce" name="workflow"
-                           value="authorization_code_with_pkce" bind:group={model.workflow}>
-                    Authorization code with pkce</label>
-            </div>
+            {/each}
         </div>
         <div id="acrValue">
             <div class="field-label">
@@ -143,7 +149,7 @@
                 <span class="label">scope</span>
             </div>
             <div class="field-label">
-                <textarea cols="30" rows="3" id="scopes" name="scopes" class="input" style="height: auto" bind:value={model.scopes}></textarea>
+                <textarea aria-label="scope" cols="30" rows="3" id="scopes" name="scopes" class="input" style="height: auto" bind:value={model.scopes}></textarea>
             </div>
         </div>
     </div>

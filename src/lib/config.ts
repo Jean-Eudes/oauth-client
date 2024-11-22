@@ -1,4 +1,4 @@
-import type {Configuration, Environment} from "./model";
+import type {Configuration, Environment, WorkflowName} from "./model";
 
 type EnvironmentName = keyof typeof config;
 
@@ -32,10 +32,6 @@ const config: Configuration = {
             authorization_code: {
                 client_id: "test-client",
                 client_secret: "",
-            },
-            authorization_code_with_pkce: {
-                client_id: "test-client",
-                client_secret: "",
             }
         },
     },
@@ -67,9 +63,13 @@ function environments(): Array<EnvironmentName> {
     return Object.keys(config);
 }
 
+function workflowsBy(env: EnvironmentName): Array<string> {
+    return Object.keys(config[env].workflow);
+}
+
 function redirectUrl(): string {
     return import.meta.env.VITE_REDIRECT_URL;
 }
 
-export {environmentBy, redirectUrl, environments};
+export {environmentBy, workflowsBy, redirectUrl, environments};
 export type {EnvironmentName};
