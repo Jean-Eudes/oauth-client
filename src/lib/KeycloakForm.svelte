@@ -2,6 +2,8 @@
     import {type KeyCloak, type WorkflowName} from "./model";
     import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, implicitWorkflow} from "./oauth2";
     import {environments, workflowsBy} from "./config";
+    import * as O from 'fp-ts/Option'
+    import type {Option} from "fp-ts/Option";
 
     export let model: KeyCloak;
 
@@ -11,28 +13,29 @@
         const data = JSON.stringify(model);
         sessionStorage.setItem('keycloak-page', data);
         let scopes = model.scopes.trim();
+        let url: Option<string> = O.none;
+        switch (model.workflow) {
+            case "implicit":
+                url = implicitWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
+                break;
+            case "authorization_code_with_pkce":
+                url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt, scopes);
+                break;
+            case "authorization_code":
+                url = authorizationCodeWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
+                break
+        }
 
-        if (model.workflow === 'implicit') {
-            let url = implicitWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
-            window.location.replace(url);
-        }
-        if (model.workflow === 'authorization_code') {
-            const url = authorizationCodeWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
-            window.location.replace(url);
-        }
-        if (model.workflow === 'authorization_code_with_pkce') {
-            const url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt, scopes);
-            window.location.replace(url);
+        if (O.isSome(url)) {
+            window.location.replace(url.value);
         }
     }
 
-    // TODO : replace string by WOrkflowName
-    function displayWorkflow(workflow: string) : string {
+    function displayWorkflow(workflow: WorkflowName) : string {
         switch (workflow) {
             case 'implicit': return 'Implicit';
             case 'authorization_code': return 'Authorization code';
             case 'authorization_code_with_pkce': return 'Authorization code with pkce';
-            default: return "";
         }
     }
 

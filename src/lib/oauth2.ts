@@ -1,6 +1,8 @@
 import {environmentBy, redirectUrl} from "./config";
-import type {AcrValue, EnvironmentName, Prompt, Token, WorkflowName} from "./model";
+import type {AcrValue, ConfidentialClient, EnvironmentName, Prompt, PublicClient, Token} from "./model";
 import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
+import type {Option} from "fp-ts/Option";
+import * as O from 'fp-ts/Option'
 
 function authorize(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string, clientId: string): string {
     const state = generateRandomString(30);
@@ -31,19 +33,26 @@ function createMapWithPrompt(prompt: Prompt) {
     return additional_params;
 }
 
-function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
+function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Option<string> {
     let additional_params = createMapWithPrompt(prompt);
     let environment = environmentBy(environmentName);
-    return authorize(environmentName, acrValues, "token id_token", additional_params, scopes, environment.workflow.implicit.client_id);
+    let client = O.fromNullable(environment.workflow.implicit);
+    let response_type = "token";
+    if (scopes.includes("openid")) {
+        response_type += " id_token";
+    }
+    return O.map((c: PublicClient) => authorize(environmentName, acrValues, response_type, additional_params, scopes, c.client_id))(client);
 }
 
-function authorization_code(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): string {
+function authorization_code(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Option<string> {
     const additional_params = createMapWithPrompt(prompt);
     let environment = environmentBy(environmentName);
-    return authorize(environmentName, acrValues, "code", additional_params, scopes, environment.workflow.authorization_code.client_id);
+    let client = O.fromNullable(environment.workflow.authorization_code);
+
+    return O.map((c: ConfidentialClient) => authorize(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client)
 }
 
-async function authorize_code_with_pkce(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string) {
+async function authorize_code_with_pkce(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Promise<Option<string>> {
     const code_verifier = generateRandomString(60);
     const code_challenge = await pkceChallengeFromVerifier(code_verifier);
     sessionStorage.setItem('oauth2', JSON.stringify({code_verifier: code_verifier}));
@@ -53,30 +62,70 @@ async function authorize_code_with_pkce(environmentName: EnvironmentName, acrVal
     additional_params.set('code_challenge', code_challenge);
     additional_params.set('code_challenge_method', 'S256');
     let environment = environmentBy(environmentName);
+    let client = O.fromNullable(environment.workflow.authorization_code_with_pkce);
 
-    return authorize(environmentName, acrValues, "code", additional_params, scopes, environment.workflow.authorization_code_with_pkce.client_id);
+    return O.map((c: PublicClient) => authorize(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client);
 }
 
-async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Token> {
+async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Option<Token>> {
     const env = environmentBy(environment);
 
-    const response = await fetch(env.token_url, {
-        method: "POST",
-        body: new URLSearchParams({
-                code: code,
-                client_id: env.workflow['authorization_code'].client_id,
-                grant_type: "authorization_code",
-                redirect_uri: redirectUrl(),
-            }
-        )
-    })
+    let workflowElement = env.workflow['authorization_code'];
+    if (workflowElement) {
+        let clientId = workflowElement.client_id;
 
-    const json = await response.json();
+        const response = await fetch(env.token_url, {
+            method: "POST",
+            headers: {
+                'Authorization': `Basic ${btoa(workflowElement.client_id + ":" + workflowElement.client_secret)}`,
+            },
+            body: new URLSearchParams({
+                    code: code,
+                    client_id: clientId,
+                    grant_type: "authorization_code",
+                    redirect_uri: redirectUrl(),
+                }
+            )
+        })
 
-    return {
-        id_token: json.id_token,
-        access_token: json.access_token
-    };
+        const json = await response.json();
+
+        return O.some({
+            id_token: json.id_token,
+            access_token: json.access_token
+        });
+    }
+    return O.none;
+}
+
+async function exchange_code_vs_token_with_pkce(environment: EnvironmentName, code: string): Promise<Option<Token>> {
+    const env = environmentBy(environment);
+    let code_verifier = sessionStorage.getItem('oauth2');
+    if (code_verifier) {
+        let parse = JSON.parse(code_verifier);
+        let workflowElement = env.workflow['authorization_code_with_pkce'];
+        if (workflowElement) {
+            const response = await fetch(env.token_url, {
+                method: "POST",
+                body: new URLSearchParams({
+                        code: code,
+                        client_id: workflowElement.client_id,
+                        grant_type: "authorization_code",
+                        redirect_uri: redirectUrl(),
+                        code_verifier: parse.code_verifier,
+                    }
+                )
+            })
+
+            sessionStorage.removeItem("oauth2");
+            const json = await response.json();
+            return O.some({
+                id_token: json.id_token,
+                access_token: json.access_token,
+            });
+        }
+    }
+    return O.none;
 }
 
 async function user_info(environment: EnvironmentName, access_token: string) {
@@ -89,32 +138,6 @@ async function user_info(environment: EnvironmentName, access_token: string) {
         }
     })
     return await response.json();
-}
-
-async function exchange_code_vs_token_with_pkce(environment: EnvironmentName, code: string): Promise<Token | null> {
-    const env = environmentBy(environment);
-    let code_verifier = sessionStorage.getItem('oauth2');
-    if (code_verifier) {
-        let parse = JSON.parse(code_verifier);
-        const response = await fetch(env.token_url, {
-            method: "POST",
-            body: new URLSearchParams({
-                    code: code,
-                    client_id: env.workflow['authorization_code_with_pkce'].client_id,
-                    grant_type: "authorization_code",
-                    redirect_uri: redirectUrl(),
-                    code_verifier: parse.code_verifier,
-                }
-            )
-        })
-        sessionStorage.removeItem("oauth2");
-        const json = await response.json();
-        return {
-            id_token: json.id_token,
-            access_token: json.access_token,
-        };
-    }
-    return null;
 }
 
 const implicitWorkflow = {

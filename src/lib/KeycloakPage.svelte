@@ -5,6 +5,8 @@
     import type {KeyCloak, Token} from "./model";
     import {onMount} from "svelte";
     import {jwtDecode} from "jwt-decode";
+    import * as O from 'fp-ts/Option'
+
     import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, user_info} from "./oauth2";
 
     let model: KeyCloak = {
@@ -25,7 +27,7 @@
         }
 
         if (model.workflow === 'implicit') {
-            const urlParams = new URLSearchParams(window.location.hash);
+            const urlParams = new URLSearchParams(window.location.hash.slice(1));
             let id_token = urlParams.get("id_token");
             let access_token = urlParams.get("access_token");
 
@@ -43,16 +45,20 @@
             let code = urlParams.get("code");
 
             if (code) {
-                token = await authorizationCodeWorkflow.token(model.environment, code);
-                userInfo = await user_info(model.environment, token.access_token);
+                let tokenOpt = await authorizationCodeWorkflow.token(model.environment, code);
+                if (O.isSome(tokenOpt)) {
+                    token = tokenOpt.value;
+                    userInfo = await user_info(model.environment, token.access_token);
+                }
             }
         }
         if (model.workflow === 'authorization_code_with_pkce') {
             const urlParams = new URLSearchParams(window.location.search);
             let code = urlParams.get("code");
             if (code) {
-                token = await authorizationCodeWorkflowWithPKCE.token(model.environment, code);
-                if (token) {
+                let tokenOpt = await authorizationCodeWorkflowWithPKCE.token(model.environment, code);
+                if (O.isSome(tokenOpt)) {
+                    token = tokenOpt.value;
                     userInfo = await user_info(model.environment, token.access_token);
                 }
             }

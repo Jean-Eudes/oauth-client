@@ -1,7 +1,7 @@
 import {type EnvironmentName} from "./config";
 
 type AcrValue = "L1" | "L2" | "L3" | "L4";
-type WorkflowName = "implicit" | "authorization_code" | "authorization_code_with_pkce";
+
 type Prompt = "none" | "login" | "no-prompt";
 
 type Environment = {
@@ -12,12 +12,19 @@ type Environment = {
 }
 
 type Workflow = {
-    [key in WorkflowName]: Client
+    implicit?: PublicClient,
+    authorization_code_with_pkce?: PublicClient,
+    authorization_code?: ConfidentialClient,
 }
 
-type Client = {
+type WorkflowName = keyof Workflow;
+
+type ConfidentialClient = {
     client_id: string,
-    client_secret?: string,
+    client_secret: string,
+}
+type PublicClient = {
+    client_id: string,
 }
 
 type Configuration = {
@@ -46,5 +53,6 @@ export type {
     Configuration,
     Environment,
     EnvironmentName,
-    Client
+    ConfidentialClient,
+    PublicClient,
 }

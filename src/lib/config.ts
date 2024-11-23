@@ -8,16 +8,12 @@ const config: Configuration = {
         token_url: "http://localhost:8080/realms/test/protocol/openid-connect/token",
         userInfo_url: "http://localhost:8080/realms/test/protocol/openid-connect/userinfo",
         workflow : {
-            implicit: {
-                client_id: "test-client"
-            },
             authorization_code: {
-                client_id: "test-client",
-                client_secret: "",
+                client_id: "test2",
+                client_secret: "A9RRp3nBTOGavYf2xB3ubaQypqAdDijG",
             },
             authorization_code_with_pkce: {
                 client_id: "test-client",
-                client_secret: "",
             }
         },
     },
@@ -30,8 +26,11 @@ const config: Configuration = {
                 client_id: "test-client"
             },
             authorization_code: {
+                client_id: "test2",
+                client_secret: "A9RRp3nBTOGavYf2xB3ubaQypqAdDijG",
+            },
+            authorization_code_with_pkce: {
                 client_id: "test-client",
-                client_secret: "",
             }
         },
     },
@@ -49,7 +48,6 @@ const config: Configuration = {
             },
             authorization_code_with_pkce: {
                 client_id: "test-client",
-                client_secret: "",
             }
         },
     },
@@ -63,8 +61,9 @@ function environments(): Array<EnvironmentName> {
     return Object.keys(config);
 }
 
-function workflowsBy(env: EnvironmentName): Array<string> {
-    return Object.keys(config[env].workflow);
+function workflowsBy(env: EnvironmentName): Array<WorkflowName> {
+    let workflow = config[env].workflow;
+    return Object.keys(workflow) as Array<WorkflowName>;
 }
 
 function redirectUrl(): string {
