@@ -5,26 +5,26 @@ type AcrValue = "L1" | "L2" | "L3" | "L4";
 type Prompt = "none" | "login" | "no-prompt";
 
 type Environment = {
-    authorize_url: string,
-    token_url: string,
-    userInfo_url: string,
-    workflow: Workflow,
+    readonly authorize_url: string,
+    readonly token_url: string,
+    readonly userInfo_url: string,
+    readonly workflow: Workflow,
 }
 
 type Workflow = {
-    implicit?: PublicClient,
-    authorization_code_with_pkce?: PublicClient,
-    authorization_code?: ConfidentialClient,
+    readonly implicit?: PublicClient,
+    readonly authorization_code_with_pkce?: PublicClient,
+    readonly authorization_code?: ConfidentialClient,
 }
 
 type WorkflowName = keyof Workflow;
 
 type ConfidentialClient = {
-    client_id: string,
-    client_secret: string,
+    readonly client_id: string,
+    readonly client_secret: string,
 }
 type PublicClient = {
-    client_id: string,
+    readonly client_id: string,
 }
 
 type Configuration = {

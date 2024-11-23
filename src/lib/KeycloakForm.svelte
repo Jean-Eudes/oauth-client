@@ -1,6 +1,6 @@
 <script lang="ts">
     import {type KeyCloak, type WorkflowName} from "./model";
-    import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, implicitWorkflow} from "./oauth2";
+    import { authorize} from "./oauth2";
     import {environments, workflowsBy} from "./config";
     import * as O from 'fp-ts/Option'
     import type {Option} from "fp-ts/Option";
@@ -9,22 +9,12 @@
 
     $: workflows = workflowsBy(model.environment);
 
-    async function authenticate() {
+    async function authenticate(event: SubmitEvent) {
+        event.preventDefault();
         const data = JSON.stringify(model);
         sessionStorage.setItem('keycloak-page', data);
         let scopes = model.scopes.trim();
-        let url: Option<string> = O.none;
-        switch (model.workflow) {
-            case "implicit":
-                url = implicitWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
-                break;
-            case "authorization_code_with_pkce":
-                url = await authorizationCodeWorkflowWithPKCE.authorize(model.environment, model.acr_value, model.prompt, scopes);
-                break;
-            case "authorization_code":
-                url = authorizationCodeWorkflow.authorize(model.environment, model.acr_value, model.prompt, scopes);
-                break
-        }
+        let url: Option<string> = await authorize(model.workflow, model.environment, model.acr_value, model.prompt, scopes);
 
         if (O.isSome(url)) {
             window.location.replace(url.value);
@@ -72,7 +62,7 @@
     }
 </style>
 
-<div class="container">
+<form class="container" onsubmit={authenticate}>
     <div class="form">
         <div id="environment">
             <div class="field-label">
@@ -93,12 +83,11 @@
                 <span class="label">Workflow</span>
             </div>
             {#each workflows as workflow}
-
-            <div class="field-label">
-                <label for="{workflow}">
-                    <input type="radio" id="{workflow}" name="workflow" value="{workflow}" bind:group={model.workflow}>
-                    {displayWorkflow(workflow)}</label>
-            </div>
+                <div class="field-label">
+                    <label for="{workflow}">
+                        <input type="radio" id="{workflow}" name="workflow" value="{workflow}" bind:group={model.workflow}>
+                        {displayWorkflow(workflow)}</label>
+                </div>
             {/each}
         </div>
         <div id="acrValue">
@@ -133,17 +122,17 @@
             </div>
             <div class="field-label">
                 <label for="no-prompt">
-                    <input type="radio" id="no-prompt" name="prompt" value="no-prompt" bind:group={model.prompt}>
+                    <input type="radio" id="no-prompt" name="prompt" value="no-prompt" bind:group={model.prompt} required>
                     no prompt</label>
             </div>
             <div class="field-label">
                 <label for="none">
-                    <input type="radio" id="none" name="prompt" value="none" bind:group={model.prompt}>
+                    <input type="radio" id="none" name="prompt" value="none" bind:group={model.prompt} required>
                     none</label>
             </div>
             <div class="field-label">
                 <label for="login">
-                    <input type="radio" id="login" name="prompt" value="login" bind:group={model.prompt}>
+                    <input type="radio" id="login" name="prompt" value="login" bind:group={model.prompt} required>
                     login</label>
             </div>
         </div>
@@ -160,10 +149,10 @@
     <div class="field is-horizontal">
         <div class="field" style="justify-content: flex-start; margin-left: 50px">
             <div class="control">
-                <button class="button is-danger" onclick="{logout}">Logout</button>
-                <button type="submit" class="button is-primary" onclick="{authenticate}">Authentification</button>
+                <button type="button" class="button is-danger" onclick="{logout}">Logout</button>
+                <button type="submit" class="button is-primary">Authentification</button>
             </div>
         </div>
     </div>
 
-</div>
+</form>

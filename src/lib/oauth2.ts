@@ -1,10 +1,10 @@
 import {environmentBy, redirectUrl} from "./config";
-import type {AcrValue, ConfidentialClient, EnvironmentName, Prompt, PublicClient, Token} from "./model";
+import type {AcrValue, ConfidentialClient, EnvironmentName, Prompt, PublicClient, Token, WorkflowName} from "./model";
 import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
 import type {Option} from "fp-ts/Option";
 import * as O from 'fp-ts/Option'
 
-function authorize(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string, clientId: string): string {
+function authorizePrivate(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string, clientId: string): string {
     const state = generateRandomString(30);
     const nonce = generateRandomString(30);
     const env = environmentBy(environment);
@@ -41,7 +41,7 @@ function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: Ac
     if (scopes.includes("openid")) {
         response_type += " id_token";
     }
-    return O.map((c: PublicClient) => authorize(environmentName, acrValues, response_type, additional_params, scopes, c.client_id))(client);
+    return O.map((c: PublicClient) => authorizePrivate(environmentName, acrValues, response_type, additional_params, scopes, c.client_id))(client);
 }
 
 function authorization_code(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Option<string> {
@@ -49,7 +49,7 @@ function authorization_code(environmentName: EnvironmentName, acrValues: AcrValu
     let environment = environmentBy(environmentName);
     let client = O.fromNullable(environment.workflow.authorization_code);
 
-    return O.map((c: ConfidentialClient) => authorize(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client)
+    return O.map((c: ConfidentialClient) => authorizePrivate(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client)
 }
 
 async function authorize_code_with_pkce(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Promise<Option<string>> {
@@ -64,7 +64,7 @@ async function authorize_code_with_pkce(environmentName: EnvironmentName, acrVal
     let environment = environmentBy(environmentName);
     let client = O.fromNullable(environment.workflow.authorization_code_with_pkce);
 
-    return O.map((c: PublicClient) => authorize(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client);
+    return O.map((c: PublicClient) => authorizePrivate(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client);
 }
 
 async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Option<Token>> {
@@ -140,18 +140,26 @@ async function user_info(environment: EnvironmentName, access_token: string) {
     return await response.json();
 }
 
-const implicitWorkflow = {
-    authorize: authorizeURLForImplicit,
+async function authorize(workflow: WorkflowName, env: EnvironmentName, acr_value: AcrValue, prompt: Prompt, scope: string): Promise<Option<string>> {
+    switch (workflow) {
+        case "implicit":
+            return Promise.resolve(authorizeURLForImplicit(env, acr_value, prompt, scope));
+        case "authorization_code_with_pkce":
+            return authorize_code_with_pkce(env, acr_value, prompt, scope);
+        case "authorization_code":
+            return Promise.resolve(authorization_code(env, acr_value, prompt, scope));
+    }
 }
 
-const authorizationCodeWorkflow = {
-    authorize: authorization_code,
-    token: exchange_code_vs_token,
+async function token(workflow: WorkflowName, env: EnvironmentName, code: string): Promise<Option<Token>> {
+    switch (workflow) {
+        case "implicit":
+            return Promise.resolve(O.none);
+        case "authorization_code_with_pkce":
+            return exchange_code_vs_token_with_pkce(env, code);
+        case "authorization_code":
+            return exchange_code_vs_token(env, code);
+    }
 }
 
-const authorizationCodeWorkflowWithPKCE = {
-    authorize: authorize_code_with_pkce,
-    token: exchange_code_vs_token_with_pkce,
-}
-
-export {implicitWorkflow, authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, user_info}
+export {token, user_info, authorize}

@@ -7,7 +7,7 @@
     import {jwtDecode} from "jwt-decode";
     import * as O from 'fp-ts/Option'
 
-    import {authorizationCodeWorkflow, authorizationCodeWorkflowWithPKCE, user_info} from "./oauth2";
+    import {token, user_info} from "./oauth2";
 
     let model: KeyCloak = {
         acr_value: 'L1',
@@ -17,7 +17,7 @@
         scopes: "openid",
     }
 
-    let token: Token | null = null;
+    let tokenModel: Token | null = null;
     let userInfo: any;
 
     onMount(async () => {
@@ -32,7 +32,7 @@
             let access_token = urlParams.get("access_token");
 
             if (id_token && access_token) {
-                token = {
+                tokenModel = {
                     id_token: id_token,
                     access_token: access_token
                 };
@@ -40,26 +40,15 @@
             }
         }
 
-        if (model.workflow === 'authorization_code') {
+        if (model.workflow === 'authorization_code' || model.workflow === 'authorization_code_with_pkce') {
             const urlParams = new URLSearchParams(window.location.search);
             let code = urlParams.get("code");
 
             if (code) {
-                let tokenOpt = await authorizationCodeWorkflow.token(model.environment, code);
+                let tokenOpt = await token(model.workflow, model.environment, code);
                 if (O.isSome(tokenOpt)) {
-                    token = tokenOpt.value;
-                    userInfo = await user_info(model.environment, token.access_token);
-                }
-            }
-        }
-        if (model.workflow === 'authorization_code_with_pkce') {
-            const urlParams = new URLSearchParams(window.location.search);
-            let code = urlParams.get("code");
-            if (code) {
-                let tokenOpt = await authorizationCodeWorkflowWithPKCE.token(model.environment, code);
-                if (O.isSome(tokenOpt)) {
-                    token = tokenOpt.value;
-                    userInfo = await user_info(model.environment, token.access_token);
+                    tokenModel = tokenOpt.value;
+                    userInfo = await user_info(model.environment, tokenModel.access_token);
                 }
             }
         }
@@ -69,9 +58,9 @@
 <div>
     <KeycloakForm model="{model}"></KeycloakForm>
     <div style="display: flex;flex-direction: row; flex-wrap: wrap">
-        {#if token}
-            <DisplayObject object="{jwtDecode(token.id_token)}" title="id token info"></DisplayObject>
-            <DisplayObject object="{jwtDecode(token.access_token)}" title="access token info"></DisplayObject>
+        {#if tokenModel}
+            <DisplayObject object="{jwtDecode(tokenModel.id_token)}" title="id token info"></DisplayObject>
+            <DisplayObject object="{jwtDecode(tokenModel.access_token)}" title="access token info"></DisplayObject>
         {/if}
 
         {#if userInfo}
