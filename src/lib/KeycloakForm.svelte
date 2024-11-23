@@ -5,9 +5,12 @@
     import * as O from 'fp-ts/Option'
     import type {Option} from "fp-ts/Option";
 
-    export let model: KeyCloak;
+    type Props = {
+        model: KeyCloak;
+    }
 
-    $: workflows = workflowsBy(model.environment);
+    let {model = $bindable()}: Props = $props();
+    let workflows: WorkflowName[] = $derived(workflowsBy(model.environment));
 
     async function authenticate(event: SubmitEvent) {
         event.preventDefault();

@@ -9,16 +9,16 @@
 
     import {token, user_info} from "./oauth2";
 
-    let model: KeyCloak = {
+    let model: KeyCloak = $state({
         acr_value: 'L1',
         environment: 'production',
         prompt: "no-prompt",
         workflow: "implicit",
         scopes: "openid",
-    }
+    });
 
-    let tokenModel: Token | null = null;
-    let userInfo: any;
+    let tokenModel: Token | null = $state(null);
+    let userInfo: any = $state(null);
 
     onMount(async () => {
         let item = sessionStorage.getItem('keycloak-page');
@@ -56,15 +56,15 @@
 
 </script>
 <div>
-    <KeycloakForm model="{model}"></KeycloakForm>
+    <KeycloakForm bind:model={model}></KeycloakForm>
     <div style="display: flex;flex-direction: row; flex-wrap: wrap">
         {#if tokenModel}
-            <DisplayObject object="{jwtDecode(tokenModel.id_token)}" title="id token info"></DisplayObject>
-            <DisplayObject object="{jwtDecode(tokenModel.access_token)}" title="access token info"></DisplayObject>
+            <DisplayObject object={jwtDecode(tokenModel.id_token)} title="id token info"></DisplayObject>
+            <DisplayObject object={jwtDecode(tokenModel.access_token)} title="access token info"></DisplayObject>
         {/if}
 
         {#if userInfo}
-            <DisplayObject object="{userInfo}" title="user info"></DisplayObject>
+            <DisplayObject object={userInfo} title="user info"></DisplayObject>
         {/if}
     </div>
 </div>

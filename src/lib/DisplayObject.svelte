@@ -1,8 +1,11 @@
 <script lang="ts">
     import dayjs from "dayjs";
 
-    export let object: object;
-    export let title: string;
+    type Props = {
+        title: string;
+        object: object;
+    }
+    let {title, object}: Props = $props();
 </script>
 
 <style>
