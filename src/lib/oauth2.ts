@@ -4,10 +4,9 @@ import {generateRandomString, pkceChallengeFromVerifier} from "./crypto";
 import type {Option} from "fp-ts/Option";
 import * as O from 'fp-ts/Option'
 
-function authorizePrivate(environment: EnvironmentName, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string, clientId: string): string {
+function authorizePrivate(clientId: string, authorizeUrl: string, acrValues: AcrValue, response_type: string, additional_infos: Map<string, string>, scope: string): string {
     const state = generateRandomString(30);
     const nonce = generateRandomString(30);
-    const env = environmentBy(environment);
     const searchParams = new URLSearchParams();
 
     searchParams.set('client_id', clientId);
@@ -22,7 +21,7 @@ function authorizePrivate(environment: EnvironmentName, acrValues: AcrValue, res
         searchParams.set(key, value);
     }
 
-    return env.authorize_url + '?' + searchParams.toString();
+    return authorizeUrl + '?' + searchParams.toString();
 }
 
 function createMapWithPrompt(prompt: Prompt) {
@@ -41,7 +40,7 @@ function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: Ac
     if (scopes.includes("openid")) {
         response_type += " id_token";
     }
-    return O.map((c: PublicClient) => authorizePrivate(environmentName, acrValues, response_type, additional_params, scopes, c.client_id))(client);
+    return O.map((c: PublicClient) => authorizePrivate(c.client_id, environment.authorize_url, acrValues, response_type, additional_params, scopes))(client);
 }
 
 function authorization_code(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Option<string> {
@@ -49,7 +48,7 @@ function authorization_code(environmentName: EnvironmentName, acrValues: AcrValu
     let environment = environmentBy(environmentName);
     let client = O.fromNullable(environment.workflow.authorization_code);
 
-    return O.map((c: ConfidentialClient) => authorizePrivate(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client)
+    return O.map((c: ConfidentialClient) => authorizePrivate(c.client_id, environment.authorize_url, acrValues, "code", additional_params, scopes))(client)
 }
 
 async function authorize_code_with_pkce(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Promise<Option<string>> {
@@ -64,7 +63,7 @@ async function authorize_code_with_pkce(environmentName: EnvironmentName, acrVal
     let environment = environmentBy(environmentName);
     let client = O.fromNullable(environment.workflow.authorization_code_with_pkce);
 
-    return O.map((c: PublicClient) => authorizePrivate(environmentName, acrValues, "code", additional_params, scopes, c.client_id))(client);
+    return O.map((c: PublicClient) => authorizePrivate(c.client_id, environment.authorize_url, acrValues, "code", additional_params, scopes))(client);
 }
 
 async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Option<Token>> {
@@ -141,6 +140,8 @@ async function user_info(environment: EnvironmentName, access_token: string) {
 }
 
 async function authorize(workflow: WorkflowName, env: EnvironmentName, acr_value: AcrValue, prompt: Prompt, scope: string): Promise<Option<string>> {
+    const environment = environmentBy(env);
+
     switch (workflow) {
         case "implicit":
             return Promise.resolve(authorizeURLForImplicit(env, acr_value, prompt, scope));

@@ -1,7 +1,8 @@
 <script lang="ts">
     import KeycloakPage from "./lib/KeycloakPage.svelte";
+    import TokenPage from "./lib/TokenPage.svelte";
 
-    let page: "keycloak" | "azure" = "keycloak";
+    let page: "keycloak" | "azure" | "token" = "keycloak";
 
 </script>
 
@@ -12,6 +13,7 @@
             <li class:is-active={page === 'keycloak'}><a href="#keycloak" onclick="{() => page = 'keycloak'}">sgconnect</a>
             </li>
             <li class:is-active={page === 'azure'}><a href="#azure" onclick="{() => page = 'azure'}">azure</a></li>
+            <li class:is-active={page === 'token'}><a href="#token" onclick="{() => page = 'token'}">token</a></li>
         </ul>
     </div>
 
@@ -28,6 +30,11 @@
                     <input type="radio" id="basic" name="authentication" value="female">
                     authentification L2</label>
             </div>
+        </div>
+    {/if}
+    {#if page === "token"}
+        <div>
+            <TokenPage></TokenPage>
         </div>
 
     {/if}
