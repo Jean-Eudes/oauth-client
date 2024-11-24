@@ -1,7 +1,7 @@
 <script lang="ts">
-    import {type KeyCloak, type WorkflowName} from "./model";
-    import { authorize} from "./oauth2";
-    import {environments, workflowsBy} from "./config";
+    import {type KeyCloak, type WorkflowName} from "$lib/model";
+    import { authorize} from "$lib/oauth2";
+    import {environments, workflowsBy} from "$lib/config";
     import * as O from 'fp-ts/Option'
     import type {Option} from "fp-ts/Option";
 
@@ -37,7 +37,7 @@
     }
 </script>
 
-<style>
+<style lang="scss">
 
     .form {
         display: flex;

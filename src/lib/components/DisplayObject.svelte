@@ -9,11 +9,12 @@
 </script>
 
 <style>
+
     div:not(:last-child) {
         margin-right: 10px;
     }
 
-    td, th {
+    table td, table th {
         padding-bottom: 0;
         padding-top: 0;
     }

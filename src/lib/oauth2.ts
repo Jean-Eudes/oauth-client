@@ -17,7 +17,7 @@ function authorizePrivate(clientId: string, authorizeUrl: string, acrValues: Acr
     searchParams.set('nonce', nonce);
     searchParams.set('acr_values', acrValues);
 
-    for (let [key, value] of additional_infos) {
+    for (const [key, value] of additional_infos) {
         searchParams.set(key, value);
     }
 
@@ -33,9 +33,9 @@ function createMapWithPrompt(prompt: Prompt) {
 }
 
 function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Option<string> {
-    let additional_params = createMapWithPrompt(prompt);
-    let environment = environmentBy(environmentName);
-    let client = O.fromNullable(environment.workflow.implicit);
+    const additional_params = createMapWithPrompt(prompt);
+    const environment = environmentBy(environmentName);
+    const client = O.fromNullable(environment.workflow.implicit);
     let response_type = "token";
     if (scopes.includes("openid")) {
         response_type += " id_token";
@@ -45,8 +45,8 @@ function authorizeURLForImplicit(environmentName: EnvironmentName, acrValues: Ac
 
 function authorization_code(environmentName: EnvironmentName, acrValues: AcrValue, prompt: Prompt, scopes: string): Option<string> {
     const additional_params = createMapWithPrompt(prompt);
-    let environment = environmentBy(environmentName);
-    let client = O.fromNullable(environment.workflow.authorization_code);
+    const environment = environmentBy(environmentName);
+    const client = O.fromNullable(environment.workflow.authorization_code);
 
     return O.map((c: ConfidentialClient) => authorizePrivate(c.client_id, environment.authorize_url, acrValues, "code", additional_params, scopes))(client)
 }
@@ -56,12 +56,12 @@ async function authorize_code_with_pkce(environmentName: EnvironmentName, acrVal
     const code_challenge = await pkceChallengeFromVerifier(code_verifier);
     sessionStorage.setItem('oauth2', JSON.stringify({code_verifier: code_verifier}));
 
-    let additional_params = createMapWithPrompt(prompt);
+    const additional_params = createMapWithPrompt(prompt);
 
     additional_params.set('code_challenge', code_challenge);
     additional_params.set('code_challenge_method', 'S256');
-    let environment = environmentBy(environmentName);
-    let client = O.fromNullable(environment.workflow.authorization_code_with_pkce);
+    const environment = environmentBy(environmentName);
+    const client = O.fromNullable(environment.workflow.authorization_code_with_pkce);
 
     return O.map((c: PublicClient) => authorizePrivate(c.client_id, environment.authorize_url, acrValues, "code", additional_params, scopes))(client);
 }
@@ -69,9 +69,9 @@ async function authorize_code_with_pkce(environmentName: EnvironmentName, acrVal
 async function exchange_code_vs_token(environment: EnvironmentName, code: string): Promise<Option<Token>> {
     const env = environmentBy(environment);
 
-    let workflowElement = env.workflow['authorization_code'];
+    const workflowElement = env.workflow['authorization_code'];
     if (workflowElement) {
-        let clientId = workflowElement.client_id;
+        const clientId = workflowElement.client_id;
 
         const response = await fetch(env.token_url, {
             method: "POST",
@@ -99,10 +99,10 @@ async function exchange_code_vs_token(environment: EnvironmentName, code: string
 
 async function exchange_code_vs_token_with_pkce(environment: EnvironmentName, code: string): Promise<Option<Token>> {
     const env = environmentBy(environment);
-    let code_verifier = sessionStorage.getItem('oauth2');
+    const code_verifier = sessionStorage.getItem('oauth2');
     if (code_verifier) {
-        let parse = JSON.parse(code_verifier);
-        let workflowElement = env.workflow['authorization_code_with_pkce'];
+        const parse = JSON.parse(code_verifier);
+        const workflowElement = env.workflow['authorization_code_with_pkce'];
         if (workflowElement) {
             const response = await fetch(env.token_url, {
                 method: "POST",
@@ -140,7 +140,6 @@ async function user_info(environment: EnvironmentName, access_token: string) {
 }
 
 async function authorize(workflow: WorkflowName, env: EnvironmentName, acr_value: AcrValue, prompt: Prompt, scope: string): Promise<Option<string>> {
-    const environment = environmentBy(env);
 
     switch (workflow) {
         case "implicit":
